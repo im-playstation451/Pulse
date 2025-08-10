@@ -4,6 +4,7 @@ const port = 3000;
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -15,6 +16,12 @@ app.use(session({
 }));
 
 let users = [];
+try {
+  const data = fs.readFileSync('users.json', 'utf8');
+  users = JSON.parse(data);
+} catch (err) {
+  console.error("Error reading user data:", err);
+}
 
 function generateID() {
   let id = '';
@@ -54,6 +61,7 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     users.push({ id, email, username, password: hashedPassword });
+    fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
     res.redirect('/login');
   } catch (error) {
     console.error("Registration Error:", error);
@@ -63,8 +71,12 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = users.find(user => user.email === email);
+    const { email: usernameOrEmail, password } = req.body;
+    
+    const user = users.find(user => 
+      user.email === usernameOrEmail || 
+      user.username === usernameOrEmail
+    );
 
     if (!user) {
       return res.status(400).send('User not found');
