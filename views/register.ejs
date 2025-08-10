@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login | ChatApp</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>Register | ChatApp</title>
   <style>
     body {
       margin: 0;
@@ -43,7 +42,7 @@
     .nav-links a:hover {
       background: #3a3a3a;
     }
-    .login-container {
+    .register-container {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -51,7 +50,7 @@
       height: 100vh;
       padding: 2rem;
     }
-    .login-box {
+    .register-box {
       background: rgba(0,0,0,0.5);
       padding: 2rem;
       border-radius: 10px;
@@ -59,7 +58,7 @@
       width: 100%;
       box-shadow: 0 0 15px rgba(114,137,218,0.3);
     }
-    .login-box h2 {
+    .register-box h2 {
       margin-bottom: 1.5rem;
       color: #7289da;
       text-align: center;
@@ -135,25 +134,31 @@
       <a href="/register">Register</a>
     </div>
   </nav>
-  
-  <main class="login-container">
-    <div class="login-box">
-      <h2>Login to Pulse</h2>
-      <form action="/login" method="POST">
+
+  <main class="register-container">
+    <div class="register-box">
+      <h2>Register for Pulse</h2>
+      <form action="/register" method="POST">
+        <div class="form-group">
+          <input type="text" name="username" placeholder="Username" required />
+        </div>
         <div class="form-group">
           <input type="email" name="email" placeholder="Email" required />
         </div>
         <div class="form-group">
           <input type="password" name="password" placeholder="Password" required />
         </div>
-        <button type="submit" class="submit-button">Login</button>
+        <div class="form-group">
+          <input type="password" name="repeatPassword" placeholder="Repeat Password" required />
+        </div>
+        <button type="submit" class="submit-button">Register</button>
       </form>
       <div class="form-link">
-        <p>Don't have an account? <a href="/register">Register here</a></p>
+        <p>Already have an account? <a href="/register">register here</a></p>
       </div>
     </div>
   </main>
-  
+
   <footer>
     © 2025 Playstation451 • All rights reserved
   </footer>

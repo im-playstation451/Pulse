@@ -15,6 +15,14 @@ app.use(session({
 
 let users = [];
 
+function generateID() {
+  let id = '';
+  for (let i = 0; i < 15; i++) {
+    id += Math.floor(Math.random() * 10);
+  }
+  return id;
+}
+
 app.get('/', (req, res) => {
   res.render('home');
 });
@@ -34,7 +42,12 @@ app.post('/register', (req, res) => {
     return res.status(400).send('Email already registered');
   }
   
-  users.push({ email, username, password });
+  if (users.some(user => user.username.toLowerCase() === username.toLowerCase())) {
+    return res.status(400).send('Username is already taken');
+  }
+  
+  const id = generateID();
+  users.push({ id, email, username, password });
   res.redirect('/login');
 });
 
@@ -69,5 +82,5 @@ app.get('/logout', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`App listening at http://localhost:${port}`);
+  console.log(`Port ${port} is pulsing alive`);
 });
