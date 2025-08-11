@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" sizes="32x32" src="/others/pulse.png" />
   <title>Pulse - Dashboard</title>
   <style>
     body {
@@ -25,13 +26,16 @@
       border: none;
     }
 
-    body::-webkit-scrollbar-thumb:hover {
-      background: #6372e9;
+    main {
+      margin: 4rem auto 4rem 220px;
+      max-width: 1100px;
+      padding: 2rem;
     }
   </style>
 </head>
 <body>
-  <main style="padding: 2rem; max-width: 1100px; margin: 4rem auto">
+  <%- include('parts/sidebar') %>
+  <main>
   </main>
 </body>
 </html>

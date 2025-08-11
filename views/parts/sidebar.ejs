@@ -1,0 +1,82 @@
+<div class="sidebar">
+  <div class="server-list">
+    <div class="server-item active">
+      <img src="/others/pulse.png" alt="Server Icon" class="server-icon" />
+      <span class="server-name">Home</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 55px;
+    height: 100vh;
+    background: #0a0a0a;
+    border-right: 1px solid #2a2a2a;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    transition: width 0.2s;
+  }
+
+  .sidebar:hover {
+    width: 220px;
+  }
+
+  .server-list {
+    width: 100%;
+  }
+
+  .server-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #ccc;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .server-item:hover {
+    background: #1e1e1e;
+    color: #fff;
+  }
+
+  .server-item.active {
+    background: #1e1e1e;
+    color: #fff;
+    border: 1px solid #7289da;
+  }
+
+  .server-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .server-name {
+    display: none;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .sidebar:hover .server-name {
+    display: inline;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const activeItem = document.querySelector('.server-item.active');
+    if (activeItem) {
+      // Keep sidebar expanded when an item is active
+      document.querySelector('.sidebar').classList.add('expanded');
+    }
+  });
+</script>

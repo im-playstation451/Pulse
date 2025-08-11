@@ -9,7 +9,13 @@ const dashboardRoutes = require('./routes/dashboard');
 const authMiddleware = require('./middleware/auth');
 
 app.set('view engine', 'ejs');
+
+// Serve static assets from `public` (already here)
 app.use(express.static('public'));
+
+// <--- NEW: serve the `others` folder ---
+app.use('/others', express.static('others'));
+
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(expressSession({
   secret: 'your-secret-key',
@@ -25,5 +31,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Pulse is beating alive at port ${port}`);
 });
