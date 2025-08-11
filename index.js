@@ -44,15 +44,16 @@ app.post('/register', async (req, res) => {
     const { email, username, password, repeatPassword } = req.body;
     
     if (password !== repeatPassword) {
-      return res.status(400).send('Passwords do not match');
+      return res.render('register', { error: 'Passwords do not match' });
+
     }
 
     if (users.some(user => user.email === email)) {
-      return res.status(400).send('Email already registered');
+      return res.status(400).render('register', { error: 'Email already registered' });
     }
 
     if (users.some(user => user.username.toLowerCase() === username.toLowerCase())) {
-      return res.status(400).send('Username is already taken');
+      return res.status(400).render('register', { error: 'Username is already taken' });
     }
 
     const id = generateID();
@@ -65,33 +66,33 @@ app.post('/register', async (req, res) => {
     res.redirect('/login');
   } catch (error) {
     console.error("Registration Error:", error);
-    res.status(500).send("Registration failed. Try again.");
+    res.render(500).send("Registration failed. Try again.");
   }
 });
 
 app.post('/login', async (req, res) => {
   try {
     const { email: usernameOrEmail, password } = req.body;
-    
+
     const user = users.find(user => 
       user.email === usernameOrEmail || 
       user.username === usernameOrEmail
     );
 
     if (!user) {
-      return res.status(400).send('User not found');
+      return res.status(400).render('login', { error: 'User not found' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).send('Incorrect password');
+      return res.status(400).render('login', { error: 'Incorrect password' });
     }
 
     req.session.user = user;
     res.redirect('/dashboard');
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).send("Login failed. Try again.");
+    res.status(500).render('login', { error: "Login failed. Try again." });
   }
 });
 
