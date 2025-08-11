@@ -1,12 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse - Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(115deg, #0a0a0a 50%, #1e1e1e 50%);
+      color: #fff;
+    }
+
+    body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    body::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    body::-webkit-scrollbar-thumb {
+      background: #7289da;
+      border: none;
+    }
+
+    body::-webkit-scrollbar-thumb:hover {
+      background: #6372e9;
+    }
+  </style>
 </head>
 <body>
-    <h2>Welcome, <%= user.username %></h2>
-    <p>ID: <%= user.id %></p> 
-    <p>Email: <%= user.email %></p>
-    <a href="/logout">Logout</a>
+  <main style="padding: 2rem; max-width: 1100px; margin: 4rem auto">
+  </main>
 </body>
 </html>
