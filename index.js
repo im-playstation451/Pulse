@@ -11,12 +11,33 @@ const accountRoutes = require('./routes/account');
 const socketIO = require('socket.io');
 const http = require('http');
 const CryptoJS = require('crypto-js');
+const fs = require('fs');
 
 const server = http.createServer(app);
 
 const io = socketIO(server);
 
 const messages = [];
+const messagesFilePath = 'messages.json';
+
+// Load messages from file on server startup
+fs.readFile(messagesFilePath, 'utf8', (err, data) => {
+  if (!err) {
+    try {
+      const parsedMessages = JSON.parse(data);
+      if (Array.isArray(parsedMessages)) {
+        messages.push(...parsedMessages);
+        console.log('Messages loaded from file.');
+      } else {
+        console.error('Error: Data read from messages file is not an array.');
+      }
+    } catch (parseError) {
+      console.error('Error parsing messages file:', parseError);
+    }
+  } else {
+    console.log('No messages file found, starting with an empty message array.');
+  }
+});
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -57,6 +78,13 @@ io.on('connection', (socket) => {
     };
 
     messages.push(newMessage);
+
+    // Save messages to file
+    fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
+      if (err) {
+        console.error('Error saving messages to file:', err);
+      }
+    });
 
     io.to([senderId, receiverId]).emit('chat message', newMessage);
   });
@@ -109,12 +137,24 @@ app.post('/dm/:id/send', authMiddleware, (req, res) => {
   const messageContent = req.body.message;
 
   if (messageContent && messageContent.trim()) {
-    io.emit('chat message', {
+    const newMessage = {
       senderId: currentUser.id,
       receiverId: targetUserId,
+      type: 'text', // Assuming it's always text here
       content: messageContent.trim(),
       timestamp: new Date().toISOString()
+    };
+
+    messages.push(newMessage);
+
+    // Save messages to file
+    fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
+      if (err) {
+        console.error('Error saving messages to file:', err);
+      }
     });
+
+    io.to([currentUser.id, targetUserId]).emit('chat message', newMessage);
   }
   res.redirect(`/dm/${targetUserId}`);
 });
