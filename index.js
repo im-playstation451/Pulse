@@ -79,7 +79,6 @@ io.on('connection', (socket) => {
 
     messages.push(newMessage);
 
-    // Save messages to file
     fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
       if (err) {
         console.error('Error saving messages to file:', err);
@@ -140,14 +139,13 @@ app.post('/dm/:id/send', authMiddleware, (req, res) => {
     const newMessage = {
       senderId: currentUser.id,
       receiverId: targetUserId,
-      type: 'text', // Assuming it's always text here
+      type: 'text',
       content: messageContent.trim(),
       timestamp: new Date().toISOString()
     };
 
     messages.push(newMessage);
 
-    // Save messages to file
     fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
       if (err) {
         console.error('Error saving messages to file:', err);

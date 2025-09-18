@@ -9,7 +9,10 @@
       "s"
     ],
     "sentFriendRequests": [],
-    "receivedFriendRequests": []
+    "receivedFriendRequests": [],
+    "GroupChats": [
+      "438272178399103"
+    ]
   },
   {
     "id": "465545010385632",
@@ -18,8 +21,6 @@
     "password": "$2b$10$gC5xxsNxu8jDwrXaro6ljuiBgbBRtG23aMVbugSyoF8cpcoQMWTAe",
     "profilepicture": "https://cdn.hyghj.eu.org/cdn/profile/default.png",
     "friends": [
-      "pickle",
-      "NiggaFarts",
       "playstation451"
     ],
     "sentFriendRequests": [],

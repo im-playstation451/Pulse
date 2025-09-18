@@ -35,10 +35,10 @@
 
     <section class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
       <h2 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Received Friend Requests</h2>
-      <% if (user.receivedFriendRequests && user.receivedFriendRequests.length> 0) { %>
-      <ul class="space-y-3">
+      <ul id="friendRequestsList" class="space-y-3">
+        <% if (user.receivedFriendRequests && user.receivedFriendRequests.length> 0) { %>
         <% user.receivedFriendRequests.forEach(requester => { %>
-        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md">
+        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md" id="request-<%= requester %>">
           <span class="text-lg"><%= requester %></span>
           <div class="flex gap-2">
             <form action="/dashboard/accept-friend-request" method="POST">
@@ -54,34 +54,35 @@
           </div>
         </li>
         <% }); %>
+        <% } %>
       </ul>
-      <% } else { %>
-      <p class="text-gray-400">No pending friend requests.</p>
+      <% if (!user.receivedFriendRequests || user.receivedFriendRequests.length === 0) { %>
+      <p id="noFriendRequests" class="text-gray-400">No pending friend requests.</p>
       <% } %>
     </section>
 
     <section class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
       <h2 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Sent Friend Requests</h2>
-      <% if (user.sentFriendRequests && user.sentFriendRequests.length> 0) { %>
-      <ul class="space-y-3">
+      <ul id="sentFriendRequestsList" class="space-y-3">
+        <% if (user.sentFriendRequests && user.sentFriendRequests.length> 0) { %>
         <% user.sentFriendRequests.forEach(sentTo => { %>
-        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md">
+        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md" id="sent-<%= sentTo %>">
           <span class="text-lg"><%= sentTo %></span>
           <span class="text-gray-400 text-sm">Pending</span>
         </li>
         <% }); %>
       </ul>
       <% } else { %>
-      <p class="text-gray-400">No outgoing friend requests.</p>
+      <p id="noSentFriendRequests" class="text-gray-400">No outgoing friend requests.</p>
       <% } %>
     </section>
 
     <section class="bg-gray-800 p-6 rounded-lg shadow-lg">
       <h2 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Your Friends</h2>
       <% if (user.friends && user.friends.length> 0) { %>
-      <ul class="space-y-3">
+      <ul id="friendsList" class="space-y-3">
         <% user.friends.forEach(friend => { %>
-        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md">
+        <li class="flex items-center justify-between bg-gray-700 p-3 rounded-md" id="friend-<%= friend %>">
           <span class="text-lg"><%= friend %></span>
            <form action="/dashboard/unfriend" method="POST">
               <input type="hidden" name="friendUsername" value="<%= friend %>">
@@ -91,7 +92,7 @@
         <% }); %>
       </ul>
       <% } else { %>
-      <p class="text-gray-400">You don't have any friends yet. Send a request!</p>
+      <p id="noFriends" class="text-gray-400">You don't have any friends yet. Send a request!</p>
       <% } %>
     </section>
 
@@ -105,14 +106,78 @@
 
     socket.on('newFriendRequest', (data) => {
       console.log('New friend request from:', data.from);
-      alert(`New friend request from ${data.from}!`);
-      location.reload();
+      const friendRequestsList = document.getElementById('friendRequestsList');
+      const noFriendRequests = document.getElementById('noFriendRequests');
+
+      const newRequest = document.createElement('li');
+      newRequest.className = 'flex items-center justify-between bg-gray-700 p-3 rounded-md';
+      newRequest.id = `request-${data.from}`;
+      newRequest.innerHTML = `
+          <span class="text-lg">${data.from}</span>
+          <div class="flex gap-2">
+            <form action="/dashboard/accept-friend-request" method="POST">
+              <input type="hidden" name="requesterUsername" value="${data.from}">
+              <button type="submit" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 text-sm">Accept</button>
+            </form>
+            <form action="/dashboard/reject-friend-request" method="POST">
+              <input type="hidden" name="requesterUsername" value="${data.from}">
+              <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 text-sm">Reject</button>
+            </form>
+          </div>
+      `;
+
+      friendRequestsList.appendChild(newRequest);
+
+      if (noFriendRequests) {
+        noFriendRequests.remove();
+      }
     });
 
     socket.on('friendRequestAccepted', (data) => {
       console.log('friendRequestAccepted:', data);
-      alert(`friendRequestAccepted from ${data.accepterUsername}!`);
-      location.reload();
+      const sentFriendRequestsList = document.getElementById('sentFriendRequestsList');
+      const sentRequestElement = document.getElementById(`sent-${data.accepterUsername}`);
+
+      if (sentRequestElement) {
+        sentRequestElement.remove();
+      }
+
+      const friendsList = document.getElementById('friendsList');
+      const noFriends = document.getElementById('noFriends');
+
+      const newFriend = document.createElement('li');
+        newFriend.className = 'flex items-center justify-between bg-gray-700 p-3 rounded-md';
+        newFriend.id = `friend-${data.accepterUsername}`;
+        newFriend.innerHTML = `
+            <span class="text-lg">${data.accepterUsername}</span>
+            <form action="/dashboard/unfriend" method="POST">
+                <input type="hidden" name="friendUsername" value="${data.accepterUsername}">
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 text-sm">Unfriend</button>
+            </form>
+        `;
+        friendsList.appendChild(newFriend);
+
+        if (noFriends) {
+            noFriends.remove();
+        }
+    });
+
+    socket.on('friendRequestRejected', (data) => {
+      console.log('friendRequestRejected:', data);
+      const sentFriendRequestsList = document.getElementById('sentFriendRequestsList');
+      const sentRequestElement = document.getElementById(`sent-${data.rejecterUsername}`);
+
+      if (sentRequestElement) {
+        sentRequestElement.remove();
+      }
+        const sentFriendRequestsListElement = document.getElementById('sentFriendRequestsList');
+        if (sentFriendRequestsListElement && sentFriendRequestsListElement.children.length === 0) {
+            const noSentFriendRequests = document.createElement('p');
+            noSentFriendRequests.id = 'noSentFriendRequests';
+            noSentFriendRequests.className = 'text-gray-400';
+            noSentFriendRequests.textContent = 'No outgoing friend requests.';
+            sentFriendRequestsListElement.appendChild(noSentFriendRequests);
+        }
     });
 
     socket.on('unfriended', (data) => {
