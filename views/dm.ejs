@@ -111,6 +111,9 @@
         <input type="text" id="messageInput" placeholder="Type your message..."
           class="flex-grow p-3 rounded-full bg-gray-800 text-white focus:bg-gray-700 outline-none transition"
           autocomplete="off" />
+        <div id="emojiSuggestions"
+          class="absolute bottom-full left-0 mb-2 w-full bg-gray-800 rounded-lg shadow-lg p-2 hidden z-20 max-h-48 overflow-y-auto">
+        </div>
         <input type="file" id="fileInput" class="hidden" accept="image/*, image/gif" />
         <div class="relative">
           <label for="fileInput"
@@ -146,6 +149,41 @@
       const imagePreview = document.getElementById('imagePreview');
       let currentImageFile = null;
 
+      const customEmojis = {
+        'cry': '/others/emojis/cry.png',
+        'blue-what': '/others/emojis/blue-what.png',
+        'cool-guy2': '/others/emojis/cool-guy2.png',
+        'what': '/others/emojis/what.png',
+        'cool-guy': '/others/emojis/cool-guy.png',
+        'very-happy-troll': '/others/emojis/very-happy-troll.png'
+      };
+
+      function replaceEmojis(text) {
+        let replacedText = text;
+        let isOnlyEmoji = true;
+        let emojiCount = 0;
+
+        let tempText = text;
+        for (const emojiName in customEmojis) {
+          const regex = new RegExp(`:${emojiName}:`, 'g');
+          if (tempText.match(regex)) {
+            emojiCount += (tempText.match(regex) || []).length;
+            tempText = tempText.replace(regex, '');
+          }
+        }
+
+        if (tempText.trim().length > 0 || emojiCount === 0) {
+          isOnlyEmoji = false;
+        }
+
+        for (const emojiName in customEmojis) {
+          const regex = new RegExp(`:${emojiName}:`, 'g');
+          const emojiClass = isOnlyEmoji ? 'inline-block w-16 h-16 align-middle' : 'inline-block w-5 h-5 align-text-bottom';
+          replacedText = replacedText.replace(regex, `<img src="${customEmojis[emojiName]}" alt="${emojiName}" class="${emojiClass}" />`);
+        }
+        return replacedText;
+      }
+
       const socket = io();
       const CDN_BASE_URL = 'https://cdn.hyghj.eu.org';
       const CDN_UPLOAD_PATH = '/upload';
@@ -164,8 +202,9 @@
           const encryptedContent = span.dataset.encryptedContent;
           if (encryptedContent) {
             try {
-              const decryptedContent = CryptoJS.AES.decrypt(encryptedContent, secretKey).toString(CryptoJS.enc.Utf8);
-              span.textContent = decryptedContent;
+              let decryptedContent = CryptoJS.AES.decrypt(encryptedContent, secretKey).toString(CryptoJS.enc.Utf8);
+              decryptedContent = replaceEmojis(decryptedContent);
+              span.innerHTML = decryptedContent;
             } catch (error) {
               console.error('Decryption error for existing message:', error);
               span.textContent = 'Failed to decrypt message';
@@ -216,7 +255,9 @@ console.log('Message content:', msg.content);
 function decryptMessage(encryptedContent) {
   const secretKey = 'my-secret-key';
   try {
-    return CryptoJS.AES.decrypt(encryptedContent, secretKey).toString(CryptoJS.enc.Utf8);
+    let decryptedContent = CryptoJS.AES.decrypt(encryptedContent, secretKey).toString(CryptoJS.enc.Utf8);
+    decryptedContent = replaceEmojis(decryptedContent);
+    return decryptedContent;
   } catch (error) {
     console.error('Decryption error:', error);
     return encryptedContent;
@@ -339,6 +380,52 @@ function decryptMessage(encryptedContent) {
           });
           messageInput.value = '';
           scrollToBottom();
+        }
+      });
+
+      messageInput.addEventListener('input', () => {
+        const text = messageInput.value;
+        const colonIndex = text.lastIndexOf(':');
+
+        if (colonIndex > -1 && (colonIndex === 0 || text[colonIndex - 1] === ' ' || text[colonIndex - 1] === '\n')) {
+          const searchTerm = text.substring(colonIndex + 1).toLowerCase();
+          const matchingEmojis = Object.keys(customEmojis).filter(emojiName =>
+            emojiName.toLowerCase().startsWith(searchTerm)
+          );
+
+          displayEmojiSuggestions(matchingEmojis, colonIndex);
+        } else {
+          emojiSuggestionsDiv.classList.add('hidden');
+          emojiSuggestionsDiv.innerHTML = '';
+        }
+      });
+
+      function displayEmojiSuggestions(emojis, colonIndex) {
+        emojiSuggestionsDiv.innerHTML = '';
+        if (emojis.length > 0) {
+          emojis.forEach(emojiName => {
+            const emojiItem = document.createElement('div');
+            emojiItem.classList.add('p-2', 'hover:bg-gray-700', 'cursor-pointer', 'flex', 'items-center');
+            emojiItem.innerHTML = `<img src="${customEmojis[emojiName]}" alt="${emojiName}" class="inline-block w-5 h-5 mr-2" /> :${emojiName}:`;
+            emojiItem.addEventListener('click', () => {
+              const currentText = messageInput.value;
+              const newText = currentText.substring(0, colonIndex) + `:${emojiName}: `;
+              messageInput.value = newText;
+              emojiSuggestionsDiv.classList.add('hidden');
+              emojiSuggestionsDiv.innerHTML = '';
+              messageInput.focus();
+            });
+            emojiSuggestionsDiv.appendChild(emojiItem);
+          });
+          emojiSuggestionsDiv.classList.remove('hidden');
+        } else {
+          emojiSuggestionsDiv.classList.add('hidden');
+        }
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!emojiSuggestionsDiv.contains(e.target) && e.target !== messageInput) {
+          emojiSuggestionsDiv.classList.add('hidden');
         }
       });
     });
