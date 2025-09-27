@@ -50,30 +50,49 @@
 
   <div
     class="flex flex-col flex-1 {{ 'ml-14 transition-all duration-200 hover:ml-40' if sidebar was present }}">
-    <header class="bg-gray-900 border-b border-gray-700 p-4 flex items-center shadow-md sticky top-0 z-10">
-      <a href="/dashboard" class="mr-3">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-          stroke="currentColor" class="w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-      </a>
-      <img src="<%= targetUser.profilepicture %>" alt="<%= targetUser.username %> Profile"
-        class="w-10 h-10 rounded-full mr-3" />
-      <div class="flex flex-col">
-        <h1 class="text-xl font-semibold"><%= targetUser.username %></h1>
-        <p class="text-sm text-gray-400">Online</p>
-      </div>
-      <div class="ml-auto flex items-center space-x-2">
-        <button class="p-2 rounded-full hover:bg-gray-700">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-            </path>
+    <div class="sticky top-0 z-20">
+      <header class="bg-gray-900 border-b border-gray-700 p-4 flex items-center shadow-md sticky top-0 z-20">
+        <a href="/dashboard" class="mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
-        </button>
+        </a>
+        <img src="<%= targetUser.profilepicture %>" alt="<%= targetUser.username %> Profile"
+          class="w-10 h-10 rounded-full mr-3" />
+        <div class="flex flex-col">
+          <h1 class="text-xl font-semibold"><%= targetUser.username %></h1>
+          <p class="text-sm text-gray-400">Online</p>
+        </div>
+        <div class="ml-auto flex items-center space-x-2">
+          <button id="screenshareButton" class="p-2 rounded-full hover:bg-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-1.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+              </path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="callInteractionWrapper" class="sticky top-20 z-10">
+        <div id="callActions" class="bg-gray-900 border-b border-gray-700 p-2 text-center text-sm">
+          <button id="startCallButton" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full mr-2">Start Call</button>
+          <button id="joinCallButton" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full hidden">Join Call</button>
+        </div>
+
+        <div id="callStatus" class="bg-gray-800 p-2 text-center text-sm hidden"></div>
+        <div id="callControls" class="bg-gray-800 p-2 text-center text-sm hidden">
+          <div id="callParticipants" class="flex items-center justify-center space-x-2 mb-2">
+         </div>
+         <button id="muteButton" class="p-2 rounded-full hover:bg-gray-700">Mute</button>
+         <button id="hangupButton" class="p-2 rounded-full hover:bg-red-700">Leave Call</button>
+       </div>
       </div>
-    </header>
+
+    <div id="screenshareContainer" class="flex flex-wrap justify-center p-4 bg-gray-800 hidden sticky top-32 z-10">
+    </div>
 
     <main class="flex-1 p-4 overflow-y-auto message-area">
       <div id="messages" class="space-y-4">
@@ -184,12 +203,10 @@
         return replacedText;
       }
 
-      const socket = io();
       const CDN_BASE_URL = 'https://cdn.hyghj.eu.org';
       const CDN_UPLOAD_PATH = '/upload';
       const AUTH_TOKEN = '88740246818a333ee9f24ce2a5ad73af';
 
-      socket.emit('joinRoom', '<%= user.id %>');
 
       function scrollToBottom() {
         window.scrollTo(0, document.body.scrollHeight);
@@ -395,10 +412,13 @@ function decryptMessage(encryptedContent) {
 
           displayEmojiSuggestions(matchingEmojis, colonIndex);
         } else {
+          const emojiSuggestionsDiv = document.getElementById('emojiSuggestions');
           emojiSuggestionsDiv.classList.add('hidden');
           emojiSuggestionsDiv.innerHTML = '';
         }
       });
+
+      const emojiSuggestionsDiv = document.getElementById('emojiSuggestions');
 
       function displayEmojiSuggestions(emojis, colonIndex) {
         emojiSuggestionsDiv.innerHTML = '';
@@ -429,6 +449,441 @@ function decryptMessage(encryptedContent) {
         }
       });
     });
+
+    const socket = io(); 
+    socket.emit('joinRoom', '<%= user.id %>');
+
+    function getDmRoomId(userId1, userId2) {
+      return [userId1, userId2].sort().join('-');
+    }
+
+    const targetUserId = '<%= targetUser.id %>';
+    const currentUserId = '<%= user.id %>';
+    const dmRoomId = getDmRoomId(currentUserId, targetUserId);
+
+    const startCallButton = document.getElementById('startCallButton');
+    const joinCallButton = document.getElementById('joinCallButton');
+    const screenshareButton = document.getElementById('screenshareButton');
+    const callStatusDiv = document.getElementById('callStatus');
+    const callControlsDiv = document.getElementById('callControls');
+    const callParticipantsDiv = document.getElementById('callParticipants');
+    const muteButton = document.getElementById('muteButton');
+    const hangupButton = document.getElementById('hangupButton');
+    const screenshareContainer = document.getElementById('screenshareContainer');
+    const callActionsDiv = document.getElementById('callActions');
+
+    let peerConnections = {};
+    let localStream;
+    let screenShareStream;
+    let isMuted = false;
+    let isSharingScreen = false;
+    let callState = null;
+
+    const iceServers = {
+      'iceServers': [
+        { 'urls': 'stun:stun.l.google.com:19302' },
+        { 'urls': 'stun:stun1.l.google.com:19302' },
+      ]
+    };
+
+    startCallButton.addEventListener('click', async () => {
+      if (!localStream) {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+        localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+      }
+      socket.emit('start-call', { callerId: currentUserId, targetUserId: targetUserId });
+    });
+    joinCallButton.addEventListener('click', async () => {
+      if (!localStream) {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+        localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+      }
+      socket.emit('join-call', { userId: currentUserId, targetUserId: targetUserId });
+    });
+
+
+    socket.on('webrtc-signal', async (data) => {
+      const { dmRoomId: signalDmRoomId, senderId, type, sdp, candidate } = data;
+      if (signalDmRoomId !== dmRoomId) {
+        console.warn('Received WebRTC signal for a different DM room, ignoring.', signalDmRoomId, dmRoomId);
+        return;
+      }
+
+      if (senderId === currentUserId) {
+        return;
+      }
+
+      let pc = peerConnections[senderId];
+      if (!pc) {
+        pc = await startPeerConnection(senderId, false);
+      }
+
+      try {
+        if (type === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit('webrtc-signal', {
+            dmRoomId: dmRoomId,
+            targetUserId: senderId,
+            senderId: currentUserId,
+            type: 'answer',
+            sdp: pc.localDescription
+          });
+        } else if (type === 'answer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        } else if (type === 'ice-candidate') {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } else if (type === 'screenshare-offer') {
+          handleScreenshareOffer(data);
+        } else if (type === 'screenshare-answer') {
+          handleScreenshareAnswer(data);
+        } else if (type === 'screenshare-ice-candidate') {
+          handleScreenshareIceCandidate(data);
+        } else if (type === 'screenshare-end') {
+          handleScreenshareEnd(data);
+        }
+      } catch (error) {
+        console.error('Error handling WebRTC signal:', type, error);
+      }
+    });
+
+    muteButton.addEventListener('click', () => {
+      if (localStream) {
+        isMuted = !isMuted;
+        localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+        muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+      } else {
+        console.warn('Cannot mute/unmute: localStream is not available.');
+      }
+    });
+
+    hangupButton.addEventListener('click', () => {
+      socket.emit('leave-call', { userId: currentUserId, targetUserId: targetUserId });
+      handleCallEnd();
+    });
+    function handleCallEnd() {
+      for (const peerId in peerConnections) {
+        if (peerConnections[peerId]) {
+          peerConnections[peerId].close();
+          delete peerConnections[peerId];
+        }
+      }
+      peerConnections = {};
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (screenShareStream) {
+        screenShareStream.getTracks().forEach(track => track.stop());
+        screenShareStream = null;
+      }
+      isSharingScreen = false;
+      screenshareButton.textContent = 'Screenshare';
+      screenshareContainer.innerHTML = '';
+      screenshareContainer.classList.add('hidden');
+
+      callStatusDiv.textContent = 'Call Disconnected';
+      callStatusDiv.classList.add('hidden');
+      callControlsDiv.classList.add('hidden');
+      callActionsDiv.classList.remove('hidden');
+      startCallButton.classList.remove('hidden');
+      joinCallButton.classList.add('hidden');
+      callParticipantsDiv.innerHTML = '';
+      callState = null;
+    }
+    let screensharePeerConnections = {};
+
+    screenshareButton.addEventListener('click', async () => {
+      if (isSharingScreen) {
+        stopScreenshare();
+      } else {
+        startScreenshare();
+      }
+    });
+
+    async function startScreenshare() {
+      try {
+        screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        isSharingScreen = true;
+        screenshareButton.textContent = 'Stop Screenshare';
+        screenshareContainer.classList.remove('hidden');
+
+        displayScreenshareStream(screenShareStream, currentUserId);
+        if (callState && callState.participants) {
+          for (const participantId of callState.participants) {
+            if (participantId !== currentUserId) {
+              const screensharePc = new RTCPeerConnection(iceServers);
+              screensharePeerConnections[participantId] = screensharePc;
+              screenShareStream.getTracks().forEach(track => screensharePc.addTrack(track, screenShareStream));
+
+              screensharePc.onicecandidate = (event) => {
+                if (event.candidate) {
+                  socket.emit('webrtc-signal', {
+                    dmRoomId: dmRoomId,
+                    targetUserId: participantId,
+                    senderId: currentUserId,
+                    type: 'screenshare-ice-candidate',
+                    candidate: event.candidate
+                  });
+                }
+              };
+
+              const offer = await screensharePc.createOffer();
+              await screensharePc.setLocalDescription(offer);
+              socket.emit('webrtc-signal', {
+                dmRoomId: dmRoomId,
+                targetUserId: participantId,
+                senderId: currentUserId,
+                type: 'screenshare-offer',
+                sdp: screensharePc.localDescription
+              });
+            }
+          }
+        }
+
+        screenShareStream.getVideoTracks()[0].onended = () => {
+          stopScreenshare();
+        };
+
+      } catch (error) {
+        console.error('Error starting screenshare:', error);
+        isSharingScreen = false;
+        screenshareButton.textContent = 'Screenshare';
+        removeScreenshareStream(currentUserId);
+      }
+    }
+    function stopScreenshare() {
+      if (screenShareStream) {
+        screenShareStream.getTracks().forEach(track => track.stop());
+        screenShareStream = null;
+      }
+
+      for (const participantId in screensharePeerConnections) {
+        if (screensharePeerConnections[participantId]) {
+          screensharePeerConnections[participantId].close();
+          delete screensharePeerConnections[participantId];
+        }
+      }
+      screensharePeerConnections = {};
+
+      isSharingScreen = false;
+      screenshareButton.textContent = 'Screenshare';
+
+      socket.emit('webrtc-signal', {
+        dmRoomId: dmRoomId,
+        senderId: currentUserId,
+        type: 'screenshare-end'
+      });
+      removeScreenshareStream(currentUserId);
+    }
+    async function startPeerConnection(remoteUserId, isInitiator) {
+      if (peerConnections[remoteUserId]) {
+        console.log(`Peer connection to ${remoteUserId} already exists.`);
+        return peerConnections[remoteUserId];
+      }
+
+      const pc = new RTCPeerConnection(iceServers);
+      peerConnections[remoteUserId] = pc;
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      } else {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+        localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+      }
+      pc.ontrack = (event) => {
+        console.log('Remote track received from:', remoteUserId, event.track);
+        const remoteAudio = new Audio();
+        remoteAudio.srcObject = event.streams[0];
+        remoteAudio.play();
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('webrtc-signal', {
+            dmRoomId: dmRoomId,
+            targetUserId: remoteUserId,
+            senderId: currentUserId,
+            type: 'ice-candidate',
+            candidate: event.candidate
+          });
+        }
+      };
+
+      if (isInitiator) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('webrtc-signal', {
+          dmRoomId: dmRoomId,
+          targetUserId: remoteUserId,
+          senderId: currentUserId,
+          type: 'offer',
+          sdp: pc.localDescription
+        });
+      }
+      return pc;
+    }
+    async function joinCallRoom() {
+      callStatusDiv.textContent = 'Connecting...';
+      callStatusDiv.classList.remove('hidden');
+      callControlsDiv.classList.remove('hidden');
+      callActionsDiv.classList.add('hidden');
+      if (callState && callState.participants) {
+        for (const participantId of callState.participants) {
+          if (participantId !== currentUserId) {
+            await startPeerConnection(participantId, true);
+          }
+        }
+      }
+    }
+    socket.on('call-state-update', async (data) => {
+      const { dmRoomId: updatedDmRoomId, call } = data;
+      if (updatedDmRoomId !== dmRoomId) {
+        console.warn('Received call-state-update for a different DM room, ignoring.', updatedDmRoomId, dmRoomId);
+        return;
+      }
+      callState = call;
+      if (callState) {
+        callActionsDiv.classList.add('hidden');
+        callControlsDiv.classList.remove('hidden');
+        callStatusDiv.classList.remove('hidden');
+        callStatusDiv.textContent = 'Call Active';
+        callParticipantsDiv.innerHTML = '';
+        const usersInCall = await Promise.all(callState.participants.map(async (pId) => {
+          if (pId === currentUserId) {
+            return { id: currentUserId, username: '<%= user.username %>', profilepicture: '<%= user.profilepicture %>' };
+          } else {
+            try {
+              const response = await fetch(`/api/user/${pId}`);
+              return await response.json();
+            } catch (error) {
+              console.error('Error fetching participant username:', error);
+              return { id: pId, username: 'Unknown User', profilepicture: '/others/pulse.png' };
+            }
+          }
+        }));
+        usersInCall.forEach(p => {
+          const participantElement = document.createElement('div');
+          participantElement.classList.add('flex', 'items-center', 'space-x-1');
+          participantElement.innerHTML = `
+            <img src="${p.profilepicture}" alt="${p.username} Profile" class="w-6 h-6 rounded-full">
+            <span class="text-sm">${p.username}</span>
+          `;
+          callParticipantsDiv.appendChild(participantElement);
+        });
+        const currentParticipants = Object.keys(peerConnections);
+        const newParticipants = callState.participants.filter(pId => pId !== currentUserId && !currentParticipants.includes(pId));
+        const leavingParticipants = currentParticipants.filter(pId => !callState.participants.includes(pId));
+        for (const newPId of newParticipants) {
+          await startPeerConnection(newPId, true);
+        }
+        for (const leavingPId of leavingParticipants) {
+          if (peerConnections[leavingPId]) {
+            peerConnections[leavingPId].close();
+            delete peerConnections[leavingPId];
+            console.log(`Closed peer connection to leaving participant: ${leavingPId}`);
+          }
+        }
+      } else {
+        handleCallEnd();
+        callActionsDiv.classList.remove('hidden');
+        startCallButton.classList.remove('hidden');
+        joinCallButton.classList.add('hidden');
+      }
+      if (callState && callState.participants.length > 0 && !callState.participants.includes(currentUserId)) {
+        joinCallButton.classList.remove('hidden');
+        startCallButton.classList.add('hidden');
+      } else if (callState && callState.participants.includes(currentUserId)) {
+        startCallButton.classList.add('hidden');
+        joinCallButton.classList.add('hidden');
+      } else {
+        startCallButton.classList.remove('hidden');
+        joinCallButton.classList.add('hidden');
+      }
+    });
+    async function handleScreenshareOffer(data) {
+      const senderId = data.senderId;
+      let screensharePc = screensharePeerConnections[senderId];
+      if (!screensharePc) {
+        screensharePc = new RTCPeerConnection(iceServers);
+        screensharePeerConnections[senderId] = screensharePc;
+        screensharePc.ontrack = (event) => {
+          console.log('Remote screenshare track received (callee):', event.track);
+          displayScreenshareStream(event.streams[0], senderId);
+        };
+        screensharePc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit('webrtc-signal', {
+              dmRoomId: dmRoomId,
+              targetUserId: senderId,
+              senderId: currentUserId,
+              type: 'screenshare-ice-candidate',
+              candidate: event.candidate
+            });
+          }
+        };
+      }
+      await screensharePc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await screensharePc.createAnswer();
+      await screensharePc.setLocalDescription(answer);
+      socket.emit('webrtc-signal', {
+        dmRoomId: dmRoomId,
+        targetUserId: senderId,
+        senderId: currentUserId,
+        type: 'screenshare-answer',
+        sdp: screensharePc.localDescription
+      });
+      screenshareContainer.classList.remove('hidden');
+    }
+    async function handleScreenshareAnswer(data) {
+      const senderId = data.senderId;
+      const screensharePc = screensharePeerConnections[senderId];
+      if (screensharePc) {
+        await screensharePc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      }
+    }
+    async function handleScreenshareIceCandidate(data) {
+      const senderId = data.senderId;
+      const screensharePc = screensharePeerConnections[senderId];
+      if (screensharePc && data.candidate) {
+        await screensharePc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    }
+    function handleScreenshareEnd(data) {
+      const senderId = data.senderId;
+      if (screensharePeerConnections[senderId]) {
+        screensharePeerConnections[senderId].close();
+        delete screensharePeerConnections[senderId];
+      }
+      removeScreenshareStream(senderId);
+      if (Object.keys(screensharePeerConnections).length === 0 && !isSharingScreen) {
+        screenshareContainer.classList.add('hidden');
+      }
+    }
+    function displayScreenshareStream(stream, senderId) {
+      let videoElement = document.getElementById(`screenshare-video-${senderId}`);
+      if (!videoElement) {
+        videoElement = document.createElement('video');
+        videoElement.id = `screenshare-video-${senderId}`;
+        videoElement.autoplay = true;
+        videoElement.playsinline = true;
+        videoElement.classList.add('w-full', 'max-w-md', 'rounded-lg', 'shadow-lg', 'm-2');
+        screenshareContainer.appendChild(videoElement);
+      }
+      videoElement.srcObject = stream;
+    }
+    function removeScreenshareStream(senderId) {
+      const videoElement = document.getElementById(`screenshare-video-${senderId}`);
+      if (videoElement) {
+        videoElement.remove();
+      }
+    }
   </script>
 </body>
 

@@ -20,7 +20,12 @@ const io = socketIO(server);
 const messages = [];
 const messagesFilePath = 'messages.json';
 
-// Load messages from file on server startup
+const activeCalls = {};
+
+function getDmRoomId(userId1, userId2) {
+  return [userId1, userId2].sort().join('-');
+}
+
 fs.readFile(messagesFilePath, 'utf8', (err, data) => {
   if (!err) {
     try {
@@ -61,6 +66,72 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    for (const dmRoomId in activeCalls) {
+      const call = activeCalls[dmRoomId];
+      if (call.participants.includes(socket.id)) {
+        call.participants = call.participants.filter(id => id !== socket.id);
+        call.screensharers = call.screensharers.filter(id => id !== socket.id);
+        socket.leave(dmRoomId);
+        console.log(`User ${socket.id} disconnected and left call in room ${dmRoomId}`);
+
+        if (call.participants.length === 0) {
+          delete activeCalls[dmRoomId];
+          io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: null });
+          console.log(`Call in room ${dmRoomId} ended due to disconnect.`);
+        } else {
+          io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: call });
+        }
+      }
+    }
+  });
+
+  socket.on('start-call', ({ callerId, targetUserId }) => {
+    const dmRoomId = getDmRoomId(callerId, targetUserId);
+    if (!activeCalls[dmRoomId]) {
+      activeCalls[dmRoomId] = {
+        callerId: callerId,
+        participants: [],
+        screensharers: []
+      };
+    }
+    if (!activeCalls[dmRoomId].participants.includes(callerId)) {
+      activeCalls[dmRoomId].participants.push(callerId);
+    }
+    socket.join(dmRoomId);
+    console.log(`User ${callerId} started and joined call in room ${dmRoomId}`);
+    io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: activeCalls[dmRoomId] });
+  });
+
+  socket.on('join-call', ({ userId, targetUserId }) => {
+    const dmRoomId = getDmRoomId(userId, targetUserId);
+    if (activeCalls[dmRoomId]) {
+      if (!activeCalls[dmRoomId].participants.includes(userId)) {
+        activeCalls[dmRoomId].participants.push(userId);
+      }
+      socket.join(dmRoomId);
+      console.log(`User ${userId} joined call in room ${dmRoomId}`);
+      io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: activeCalls[dmRoomId] });
+    } else {
+      console.log(`Attempted to join non-existent call in room ${dmRoomId}`);
+    }
+  });
+
+  socket.on('leave-call', ({ userId, targetUserId }) => {
+    const dmRoomId = getDmRoomId(userId, targetUserId);
+    if (activeCalls[dmRoomId]) {
+      activeCalls[dmRoomId].participants = activeCalls[dmRoomId].participants.filter(id => id !== userId);
+      activeCalls[dmRoomId].screensharers = activeCalls[dmRoomId].screensharers.filter(id => id !== userId);
+      socket.leave(dmRoomId);
+      console.log(`User ${userId} left call in room ${dmRoomId}`);
+
+      if (activeCalls[dmRoomId].participants.length === 0) {
+        delete activeCalls[dmRoomId];
+        io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: null }); 
+        console.log(`Call in room ${dmRoomId} ended.`);
+      } else {
+        io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: activeCalls[dmRoomId] });
+      }
+    }
   });
 
   socket.on('chat message', (msg) => {
@@ -102,6 +173,28 @@ io.on('connection', (socket) => {
     alert(`You have been unfriended by ${data.unfrienderUsername}!`);
     location.reload();
   });
+
+  socket.on('webrtc-signal', (data) => {
+    const { dmRoomId, senderId, targetUserId } = data;
+    if (dmRoomId && activeCalls[dmRoomId]) {
+      socket.to(dmRoomId).emit('webrtc-signal', data);
+    } else if (targetUserId) {
+      io.to(targetUserId).emit('webrtc-signal', data);
+    } else {
+      console.warn('webrtc-signal received without dmRoomId or targetUserId:', data);
+    }
+  });
+});
+
+app.get('/api/user/:id', authMiddleware, async (req, res) => {
+  const users = await readUsers();
+  const userId = req.params.id;
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    res.json({ id: user.id, username: user.username, profilepicture: user.profilepicture });
+  } else {
+    res.status(404).json({ message: 'User not found' });
+  }
 });
 
 app.get('/dm/:id', authMiddleware, async (req, res) => {
@@ -163,6 +256,7 @@ app.post('/dm/:id/send', authMiddleware, (req, res) => {
 app.use('/', userRoutes);
 app.use('/dashboard', authMiddleware, dashboardRoutes);
 app.use('/', authMiddleware, accountRoutes);
+app.use('/vc', authMiddleware, require('./routes/voice'));
 
 app.set('io', io);
 
