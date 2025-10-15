@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
       return res.render('register', { error: 'Passwords do not match' });
     }
 
-    const users = readUsers();
+    const users = await readUsers();
 
     if (users.some(user => user.email === email)) {
       return res.status(400).render('register', { error: 'Email already registered' });
@@ -57,7 +57,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const users = readUsers();
+    const users = await readUsers();
     const user = users.find(user => user.email === email);
 
     if (!user) {
