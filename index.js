@@ -12,14 +12,13 @@ const accountRoutes = require('./routes/account');
 const socketIO = require('socket.io');
 const http = require('http');
 const CryptoJS = require('crypto-js');
-const fs = require('fs');
+const axios = require('axios');
 
 const server = http.createServer(app);
 
 const io = socketIO(server);
 
-const messages = [];
-const messagesFilePath = 'messages.json';
+let messages = []; // Change to let as it will be reassigned
 
 const activeCalls = {};
 
@@ -27,23 +26,47 @@ function getDmRoomId(userId1, userId2) {
   return [userId1, userId2].sort().join('-');
 }
 
-fs.readFile(messagesFilePath, 'utf8', (err, data) => {
-  if (!err) {
-    try {
-      const parsedMessages = JSON.parse(data);
-      if (Array.isArray(parsedMessages)) {
-        messages.push(...parsedMessages);
-        console.log('Messages loaded from file.');
-      } else {
-        console.error('Error: Data read from messages file is not an array.');
+async function fetchMessagesFromCDN() {
+  try {
+    const cdnBaseUrl = process.env.CDN_BASE_URL;
+    const cdnAuthToken = process.env.CDN_AUTH_TOKEN;
+    const response = await axios.get(`${cdnBaseUrl}/cdn/others/messages.json`, {
+      headers: {
+        'Authorization': cdnAuthToken
       }
-    } catch (parseError) {
-      console.error('Error parsing messages file:', parseError);
-    }
-  } else {
-    console.log('No messages file found, starting with an empty message array.');
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching messages from CDN:', error.message);
+    return [];
   }
-});
+}
+
+async function updateMessagesOnCDN(messagesToUpdate) {
+  try {
+    const cdnBaseUrl = process.env.CDN_BASE_URL;
+    const cdnAuthToken = process.env.CDN_AUTH_TOKEN;
+    await axios.post(`${cdnBaseUrl}/update-json`, {
+      folder: '/cdn/others',
+      filename: 'messages.json',
+      data: messagesToUpdate
+    }, {
+      headers: {
+        'Authorization': cdnAuthToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('Messages updated on CDN.');
+  } catch (error) {
+    console.error('Error updating messages on CDN:', error.message);
+  }
+}
+
+// Initialize messages from CDN
+(async () => {
+  messages = await fetchMessagesFromCDN();
+  console.log('Messages loaded from CDN.');
+})();
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -127,7 +150,7 @@ io.on('connection', (socket) => {
 
       if (activeCalls[dmRoomId].participants.length === 0) {
         delete activeCalls[dmRoomId];
-        io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: null }); 
+        io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: null });
         console.log(`Call in room ${dmRoomId} ended.`);
       } else {
         io.to(dmRoomId).emit('call-state-update', { dmRoomId, call: activeCalls[dmRoomId] });
@@ -135,7 +158,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('chat message', (msg) => {
+  socket.on('chat message', async (msg) => {
     const { senderId, receiverId, type, content } = msg;
 
     let encryptedContent = content;
@@ -153,12 +176,7 @@ io.on('connection', (socket) => {
     };
 
     messages.push(newMessage);
-
-    fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
-      if (err) {
-        console.error('Error saving messages to file:', err);
-      }
-    });
+    await updateMessagesOnCDN(messages); // Update messages on CDN
 
     io.to([senderId, receiverId]).emit('chat message', newMessage);
   });
@@ -227,7 +245,7 @@ app.get('/dm/:id', authMiddleware, async (req, res) => {
   });
 });
 
-app.post('/dm/:id/send', authMiddleware, (req, res) => {
+app.post('/dm/:id/send', authMiddleware, async (req, res) => {
   const targetUserId = req.params.id;
   const currentUser = req.session.user;
   const messageContent = req.body.message;
@@ -242,12 +260,7 @@ app.post('/dm/:id/send', authMiddleware, (req, res) => {
     };
 
     messages.push(newMessage);
-
-    fs.writeFile(messagesFilePath, JSON.stringify(messages), (err) => {
-      if (err) {
-        console.error('Error saving messages to file:', err);
-      }
-    });
+    await updateMessagesOnCDN(messages); // Update messages on CDN
 
     io.to([currentUser.id, targetUserId]).emit('chat message', newMessage);
   }
