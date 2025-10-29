@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" sizes="32x32" src="/others/pulse.png">
-  <title>Pulse - DM with <%= targetUser.username %></title>
+  <title>Pulse - GC - <%= groupChat.name %></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -58,18 +58,41 @@
   <div
     class="flex flex-col flex-1 {{ 'ml-14 transition-all duration-200 hover:ml-40' if sidebar was present }}">
     <div class="sticky top-0 z-20">
-      <header class="bg-gray-900 border-b border-gray-700 p-4 flex items-center shadow-md sticky top-0 z-20">
-        <a href="/dashboard" class="mr-3">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-          </svg>
-        </a>
-        <img src="<%= targetUser.profilepicture %>" alt="<%= targetUser.username %> Profile"
-          class="w-10 h-10 rounded-full mr-3" />
-        <div class="flex flex-col">
-          <h1 class="text-xl font-semibold"><%= targetUser.username %></h1>
-          <p class="text-sm text-gray-400">Online</p>
+      <header class="bg-gray-900 border-b border-gray-700 p-4 flex items-center justify-between shadow-md sticky top-0 z-20">
+        <div class="flex items-center">
+          <a href="/dashboard" class="mr-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </a>
+          <button onclick="openChangeGcPictureModal('<%= groupChat.id %>')" class="w-10 h-10 rounded-full mr-3 flex items-center justify-center bg-blue-700 text-white text-sm font-bold hover:opacity-80 transition duration-150 relative group" title="Change Group Chat Picture">
+            <% if (groupChat.picture) { %>
+            <img src="<%= groupChat.picture %>" alt="<%= groupChat.name %> Picture" class="w-full h-full object-cover rounded-full">
+            <% } else { %>
+            GC
+            <% } %>
+            <div class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-150">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.218A2 2 0 0110.778 3h2.444a2 2 0 011.664.89l.812 1.218A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </div>
+          </button>
+          <div class="flex flex-col">
+            <div id="gcNameDisplay" class="text-xl font-semibold cursor-pointer"><%= groupChat.name %></div>
+            <input type="text" id="gcNameInput" class="hidden text-xl font-semibold bg-gray-700 text-white p-1 rounded" value="<%= groupChat.name %>" />
+            <p class="text-sm text-gray-400"><%= participants.length %> Members</p>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <button onclick="openGroupChatModal('<%= groupChat.id %>')" class="p-2 rounded-full hover:bg-gray-700 transition text-gray-300 mr-2" title="Edit Group Chat">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm-6 14c0-2 4-3.1 6-3.1s6 1.1 6 3.1v1H6v-1zm12-4h-2v-2h-2v2h-2v2h2v2h2v-2h2v-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button onclick="leaveGroupChat('<%= groupChat.id %>')" class="p-2 rounded-full hover:bg-red-700 transition text-red-300" title="Leave Group Chat">
+            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -92,10 +115,16 @@
 
     <main class="flex-1 p-4 overflow-y-auto message-area">
       <div id="messages" class="space-y-2">
+        <%
+          function findUserById(userId, users) {
+            return users.find(u => u.id === userId);
+          }
+        %>
         <% messages.forEach((message, index) => { %>
         <%
           let shouldGroup = false;
           const previousMessage = index > 0 ? messages[index - 1] : null;
+          const sender = findUserById(message.senderId, users);
           
           if (previousMessage) {
             const currentSenderId = message.senderId;
@@ -116,16 +145,16 @@
           }
         %>
         <div class="message-item flex items-start hover:bg-gray-700/50 p-1 rounded-lg -mx-1 <%= shouldGroup ? '-mt-3' : '' %>" data-sender-id="<%= message.senderId %>" data-timestamp="<%= message.timestamp %>">
-          <% if (!shouldGroup) { %>
-          <img src="<%= message.senderId === user.id ? user.profilepicture : targetUser.profilepicture %>" alt="<%= message.senderId === user.id ? user.username : targetUser.username %> Profile"
+          <% if (!shouldGroup && sender) { %>
+          <img src="<%= sender.profilepicture %>" alt="<%= sender.username %> Profile"
             class="w-10 h-10 rounded-full mr-4 mt-1">
           <% } else { %>
           <div class="w-10 h-10 mr-4"></div>
           <% } %>
           <div class="flex flex-col min-w-0">
-            <% if (!shouldGroup) { %>
+            <% if (!shouldGroup && sender) { %>
             <div class="message-header flex items-baseline mb-1">
-              <span class="font-semibold text-white mr-2"><%= message.senderId === user.id ? user.username : targetUser.username %></span>
+              <span class="font-semibold text-white mr-2"><%= sender.username %></span>
               <span class="text-xs text-gray-400"><%= new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></span>
             </div>
             <% } %>
@@ -178,6 +207,43 @@
       window.scrollTo(0,document.body.scrollHeight);
     };
 
+    function openChangeGcPictureModal(groupId) {
+      document.getElementById('gcIdPictureChange').value = groupId;
+      document.getElementById('changeGcPictureModal').classList.remove('hidden');
+    }
+
+    function closeChangeGcPictureModal() {
+      document.getElementById('changeGcPictureModal').classList.add('hidden');
+      document.getElementById('gcPictureInput').value = '';
+      document.getElementById('gcPicturePreview').innerHTML = '';
+    }
+
+    async function leaveGroupChat(groupId) {
+      if (!confirm('Are you sure you want to leave this group chat?')) {
+        return;
+      }
+
+      try {
+        const encodedGroupId = encodeURIComponent(groupId);
+        const response = await fetch(`/dashboard/gc/leave/${encodedGroupId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          window.location.href = '/dashboard';
+        } else {
+          const error = await response.json();
+          alert(`Failed to leave group chat: ${error.message || response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error leaving group chat:', error);
+        alert('An unexpected error occurred while trying to leave the group chat.');
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const messageArea = document.querySelector('.message-area');
       const messageForm = document.getElementById('messageForm');
@@ -185,6 +251,12 @@
       const messagesDiv = document.getElementById('messages');
       const fileInput = document.getElementById('fileInput');
       const imagePreview = document.getElementById('imagePreview');
+      const gcPictureInput = document.getElementById('gcPictureInput');
+      const gcPicturePreview = document.getElementById('gcPicturePreview');
+      const changeGcPictureForm = document.getElementById('changeGcPictureForm');
+      const gcNameDisplay = document.getElementById('gcNameDisplay');
+      const gcNameInput = document.getElementById('gcNameInput');
+      const gcRoomId = '<%= groupChat.id %>';
       let currentImageFile = null;
 
       const customEmojis = {
@@ -270,9 +342,14 @@
 
       observer.observe(messagesDiv, { childList: true });
 
+function findParticipantById(userId) {
+  return participantsData.find(p => p.id === userId);
+}
+
 function displayMessage(msg) {
         const isCurrentUser = msg.senderId === '<%= user.id %>';
         const messageTimestamp = new Date(msg.timestamp);
+        const sender = findParticipantById(msg.senderId);
 
         const lastMessageElement = messagesDiv.lastElementChild;
         let shouldGroup = false;
@@ -307,13 +384,13 @@ function displayMessage(msg) {
         
         const profilePictureHtml = shouldGroup
           ? '<div class="w-10 h-10 mr-4"></div>'
-          : `<img src="${isCurrentUser ? '<%= user.profilepicture %>' : '<%= targetUser.profilepicture %>'} " alt="${isCurrentUser ? '<%= user.username %>' : '<%= targetUser.username %>'} Profile"
+          : `<img src="${sender ? sender.profilepicture : '<%= process.env.DEFAULT_PROFILE_PICTURE %>'} " alt="${sender ? sender.username : 'Unknown User'} Profile"
               class="w-10 h-10 rounded-full mr-4 mt-1">`;
 
         const headerHtml = shouldGroup
           ? ''
           : `<div class="message-header flex items-baseline mb-1">
-                <span class="font-semibold text-white mr-2">${isCurrentUser ? '<%= user.username %>' : '<%= targetUser.username %>'}</span>
+                <span class="font-semibold text-white mr-2">${sender ? sender.username : 'Unknown User'}</span>
                 <span class="text-xs text-gray-400">${messageTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>`;
 
@@ -354,7 +431,7 @@ function encryptMessage(content) {
 async function saveMessageToCDN(messageData) {
   const payload = {
     folder: 'others',
-    filename: `${dmRoomId}.json`,
+    filename: `${gcRoomId}.json`,
     data: messageData
   };
 
@@ -471,7 +548,7 @@ async function saveMessageToCDN(messageData) {
         if (imageUrl) {
           const imageMessage = {
             senderId: '<%= user.id %>',
-            receiverId: '<%= targetUser.id %>',
+            groupId: '<%= groupChat.id %>',
             type: 'image',
             content: imageUrl,
             timestamp: timestamp
@@ -493,7 +570,7 @@ async function saveMessageToCDN(messageData) {
           const encryptedContent = encryptMessage(rawMessageContent);
           const textMessage = {
             senderId: '<%= user.id %>',
-            receiverId: '<%= targetUser.id %>',
+            groupId: '<%= groupChat.id %>',
             type: 'text',
             content: encryptedContent,
             timestamp: timestamp
@@ -544,6 +621,7 @@ async function saveMessageToCDN(messageData) {
             });
             emojiSuggestionsDiv.appendChild(emojiItem);
           });
+      
           emojiSuggestionsDiv.classList.remove('hidden');
         } else {
           emojiSuggestionsDiv.classList.add('hidden');
@@ -555,18 +633,125 @@ async function saveMessageToCDN(messageData) {
           emojiSuggestionsDiv.classList.add('hidden');
         }
       });
+      gcPictureInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            gcPicturePreview.innerHTML = `<img src="${e.target.result}" alt="Preview" class="w-24 h-24 object-cover rounded-full shadow-md" />`;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          gcPicturePreview.innerHTML = '';
+        }
+      });
+
+      changeGcPictureForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const groupId = document.getElementById('gcIdPictureChange').value;
+        const fileInput = document.getElementById('gcPictureInput');
+        const file = fileInput.files[0];
+
+        if (!file) {
+          alert('Please select a file.');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('picture', file);
+
+        try {
+          const response = await fetch(`/dashboard/gc/picture/${groupId}`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            alert('Group chat picture updated successfully!');
+            closeChangeGcPictureModal();
+            window.location.reload();
+          } else {
+            const error = await response.json();
+            alert(`Failed to update picture: ${error.message || response.statusText}`);
+          }
+        } catch (error) {
+          console.error('Error updating group chat picture:', error);
+          alert('An unexpected error occurred while trying to update the picture.');
+        }
+      });
+
+      async function updateGroupChatName(groupId, newName) {
+        try {
+          const response = await fetch(`/dashboard/gc/name/${groupId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: newName }),
+          });
+
+          if (response.ok) {
+            console.log('Group chat name updated successfully!');
+            document.title = `Pulse - GC - ${newName}`;
+            return true;
+          } else {
+            const error = await response.json();
+            alert(`Failed to update group chat name: ${error.message || response.statusText}`);
+            return false;
+          }
+        } catch (error) {
+          console.error('Error updating group chat name:', error);
+          alert('An unexpected error occurred while trying to update the group chat name.');
+          return false;
+        }
+      }
+
+      gcNameDisplay.addEventListener('click', () => {
+        gcNameDisplay.classList.add('hidden');
+        gcNameInput.classList.remove('hidden');
+        gcNameInput.focus();
+        gcNameInput.select();
+      });
+
+      gcNameInput.addEventListener('blur', async () => {
+        const newName = gcNameInput.value.trim();
+        const originalName = gcNameDisplay.textContent.trim();
+
+        if (newName && newName !== originalName) {
+          const success = await updateGroupChatName(gcRoomId, newName);
+          if (success) {
+            gcNameDisplay.textContent = newName;
+          } else {
+            gcNameInput.value = originalName;
+          }
+        } else {
+          gcNameInput.value = originalName;
+        }
+
+        gcNameInput.classList.add('hidden');
+        gcNameDisplay.classList.remove('hidden');
+      });
+
+      gcNameInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          gcNameInput.blur(); 
+        } else if (e.key === 'Escape') {
+          gcNameInput.value = gcNameDisplay.textContent.trim();
+          gcNameInput.classList.add('hidden');
+          gcNameDisplay.classList.remove('hidden');
+        }
+      });
     });
 
-    const socket = io(); 
-    socket.emit('joinRoom', '<%= user.id %>');
-
-    function getDmRoomId(userId1, userId2) {
-      return [userId1, userId2].sort().join('-');
-    }
-
-    const targetUserId = '<%= targetUser.id %>';
+    const socket = io();
+    
     const currentUserId = '<%= user.id %>';
-    const dmRoomId = getDmRoomId(currentUserId, targetUserId);
+    const gcRoomId = '<%= groupChat.id %>';
+    const participantsData = JSON.parse('<%- JSON.stringify(participants) %>');
+
+    socket.emit('joinRoom', '<%= user.id %>');
+    socket.emit('joinRoom', gcRoomId);
 
     const startCallButton = document.getElementById('startCallButton');
     const joinCallButton = document.getElementById('joinCallButton');
@@ -599,8 +784,8 @@ async function saveMessageToCDN(messageData) {
           return;
         }
       }
-      console.log('Emitting start-call with callerId:', currentUserId, 'targetUserId:', targetUserId);
-      socket.emit('start-call', { callerId: currentUserId, targetUserId: targetUserId });
+      console.log('Emitting start-call with callerId:', currentUserId, 'gcRoomId:', gcRoomId);
+      socket.emit('start-call', { callerId: currentUserId, gcRoomId: gcRoomId });
     });
     joinCallButton.addEventListener('click', async () => {
       if (!localStream) {
@@ -616,15 +801,15 @@ async function saveMessageToCDN(messageData) {
           return;
         }
       }
-      console.log('Emitting join-call with userId:', currentUserId, 'targetUserId:', targetUserId);
-      socket.emit('join-call', { userId: currentUserId, targetUserId: targetUserId });
+      console.log('Emitting join-call with userId:', currentUserId, 'gcRoomId:', gcRoomId);
+      socket.emit('join-call', { userId: currentUserId, gcRoomId: gcRoomId });
     });
 
 
     socket.on('webrtc-signal', async (data) => {
-      const { dmRoomId: signalDmRoomId, senderId, signal } = data;
-      if (signalDmRoomId !== dmRoomId) {
-        console.warn('Received WebRTC signal for a different DM room, ignoring.', signalDmRoomId, dmRoomId);
+      const { gcRoomId: signalGcRoomId, senderId, signal } = data;
+      if (signalGcRoomId !== gcRoomId) {
+        console.warn('Received WebRTC signal for a different GC room, ignoring.', signalGcRoomId, gcRoomId);
         return;
       }
 
@@ -672,7 +857,7 @@ async function saveMessageToCDN(messageData) {
     });
 
     hangupButton.addEventListener('click', () => {
-      socket.emit('leave-call', { userId: currentUserId, targetUserId: targetUserId });
+      socket.emit('leave-call', { userId: currentUserId, gcRoomId: gcRoomId });
       handleCallEnd();
     });
     function handleCallEnd() {
@@ -734,7 +919,7 @@ async function saveMessageToCDN(messageData) {
       peer.on('signal', (signal) => {
         console.log('SimplePeer signal generated for', remoteUserId, ':', signal);
         socket.emit('webrtc-signal', {
-          dmRoomId: dmRoomId,
+          gcRoomId: gcRoomId,
           targetUserId: remoteUserId,
           senderId: currentUserId,
           signal: signal
@@ -744,7 +929,7 @@ async function saveMessageToCDN(messageData) {
       peer.on('iceCandidate', (candidate) => {
         console.log('ICE candidate generated for', remoteUserId, ':', candidate);
         socket.emit('webrtc-signal', {
-          dmRoomId: dmRoomId,
+          gcRoomId: gcRoomId,
           targetUserId: remoteUserId,
           senderId: currentUserId,
           signal: { candidate: candidate }
@@ -798,9 +983,9 @@ async function saveMessageToCDN(messageData) {
       }
     }
     socket.on('call-state-update', async (data) => {
-      const { dmRoomId: updatedDmRoomId, call } = data;
-      if (updatedDmRoomId !== dmRoomId) {
-        console.warn('Received call-state-update for a different DM room, ignoring.', updatedDmRoomId, dmRoomId);
+      const { gcRoomId: updatedGcRoomId, call } = data;
+      if (updatedGcRoomId !== gcRoomId) {
+        console.warn('Received call-state-update for a different GC room, ignoring.', updatedGcRoomId, gcRoomId);
         return;
       }
       callState = call;
@@ -810,19 +995,14 @@ async function saveMessageToCDN(messageData) {
         callStatusDiv.classList.remove('hidden');
         callStatusDiv.textContent = 'Call Active';
         callParticipantsDiv.innerHTML = '';
-        const usersInCall = await Promise.all(callState.participants.map(async (pId) => {
-          if (pId === currentUserId) {
-            return { id: currentUserId, username: '<%= user.username %>', profilepicture: '<%= user.profilepicture %>' };
+        const usersInCall = callState.participants.map((pId) => {
+          const participant = participantsData.find(p => p.id === pId);
+          if (participant) {
+            return participant;
           } else {
-            try {
-              const response = await fetch(`/api/user/${pId}`);
-              return await response.json();
-            } catch (error) {
-              console.error('Error fetching participant username:', error);
-              return { id: pId, username: 'Unknown User', profilepicture: '<%= process.env.DEFAULT_PROFILE_PICTURE %>' };
-            }
+            return { id: pId, username: 'Unknown User', profilepicture: '<%= process.env.DEFAULT_PROFILE_PICTURE %>' };
           }
-        }));
+        });
         usersInCall.forEach(p => {
           const participantElement = document.createElement('div');
           participantElement.classList.add('flex', 'items-center', 'space-x-1');
@@ -905,8 +1085,8 @@ async function saveMessageToCDN(messageData) {
       };
     }
   </script>
+<%- include('parts/gc-icon') %>
 <%- include('parts/gc-create', { user: user }) %>
 </body>
 
 </html>
-

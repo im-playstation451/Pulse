@@ -10,6 +10,7 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "fs": "^0.0.1-security",
+    "multer": "^2.0.2",
     "path": "^0.12.7",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1",

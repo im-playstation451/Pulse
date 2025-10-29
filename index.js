@@ -4,7 +4,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const expressSession = require('express-session');
 const bodyparser = require('body-parser');
-const { readUsers } = require('./utils/user');
+const { readUsers, readGroupChats } = require('./utils/user');
 const userRoutes = require('./routes/user');
 const dashboardRoutes = require('./routes/dashboard');
 const authMiddleware = require('./middleware/auth');
@@ -25,11 +25,11 @@ function getDmRoomId(userId1, userId2) {
 }
 
 app.set('view engine', 'ejs');
-async function fetchDmMessages(dmRoomId) {
+async function fetchMessages(roomId) {
   try {
     const cdnBaseUrl = process.env.CDN_BASE_URL;
     const cdnAuthToken = process.env.CDN_AUTH_TOKEN;
-    const filename = `${dmRoomId}.json`;
+    const filename = `${roomId}.json`;
     const response = await axios.get(`${cdnBaseUrl}/cdn/others/${filename}`, {
       headers: {
         'Authorization': cdnAuthToken
@@ -38,9 +38,9 @@ async function fetchDmMessages(dmRoomId) {
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     if (error.response && error.response.status === 404) {
-      console.log(`No message history found for room ${dmRoomId}.`);
+      console.log(`No message history found for room ${roomId}.`);
     } else {
-      console.error(`Error fetching messages for room ${dmRoomId} from CDN:`, error.message);
+      console.error(`Error fetching messages for room ${roomId} from CDN:`, error.message);
     }
     return [];
   }
@@ -135,17 +135,24 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', async (msg) => {
-    const { senderId, receiverId, type, content } = msg;
+    const { senderId, receiverId, groupId, type, content } = msg;
 
     const newMessage = {
       senderId: senderId,
       receiverId: receiverId,
+      groupId: groupId,
       type: type,
-      content: content, 
+      content: content,
       timestamp: new Date().toISOString()
     };
 
-    io.to([senderId, receiverId]).emit('chat message', newMessage);
+    if (groupId) {
+      io.to(groupId).emit('chat message', newMessage);
+    } else if (receiverId) {
+      io.to([senderId, receiverId]).emit('chat message', newMessage);
+    } else {
+      console.warn('Received chat message without receiverId or groupId:', msg);
+    }
   });
 
   socket.on('friendRequestAccepted', (data) => {
@@ -198,7 +205,7 @@ app.get('/dm/:id', authMiddleware, async (req, res) => {
   }
 
   const dmRoomId = getDmRoomId(currentUser.id, targetUserId);
-  let conversationMessages = await fetchDmMessages(dmRoomId);
+  let conversationMessages = await fetchMessages(dmRoomId);
 
   conversationMessages = conversationMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
@@ -206,6 +213,38 @@ app.get('/dm/:id', authMiddleware, async (req, res) => {
     user: currentUser,
     targetUser: targetUser,
     users: users,
+    messages: conversationMessages
+  });
+});
+
+app.get('/gc/:id', authMiddleware, async (req, res) => {
+  const users = await readUsers();
+  const groupChats = await readGroupChats();
+  const groupId = req.params.id;
+  const groupChat = groupChats.find(gc => gc.id === groupId);
+
+  if (!groupChat) {
+    return res.status(404).render('error', { message: 'Group Chat not found.' });
+  }
+
+  const currentUser = req.session.user;
+  if (!groupChat.participants.includes(currentUser.id)) {
+    return res.redirect('/dashboard?message=' + encodeURIComponent('You are not a participant in this group chat.'));
+  }
+
+  let conversationMessages = await fetchMessages(groupId);
+
+  conversationMessages = conversationMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const participantDetails = groupChat.participants.map(pId => {
+    return users.find(u => u.id === pId);
+  }).filter(u => u !== undefined);
+
+  res.render('gc', {
+    user: currentUser,
+    groupChat: groupChat,
+    participants: participantDetails,
+    users: users, 
     messages: conversationMessages
   });
 });

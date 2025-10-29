@@ -10,7 +10,7 @@
 </head>
 
 <body class="bg-gradient-to-r from-gray-900 to-gray-800 font-sans text-white antialiased min-h-screen">
-  <%- include('parts/sidebar', { user: user, users: users }) %>
+  <%- include('parts/sidebar', { user: user, users: users, groupChats: groupChats }) %>
   <main class="ml-56 md:ml-64 p-8 min-h-screen">
 
     <% if (typeof message !== 'undefined' && message) { %>
@@ -186,6 +186,9 @@
     location.reload();
   });
   </script>
+
+  <%- include('parts/gc-create', { user: user }) %>
+
 </body>
 
 </html>

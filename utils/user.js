@@ -69,4 +69,43 @@ const updateUserField = async (userId, fieldName, fieldValue) => {
   }
 };
 
-module.exports = { readUsers, writeUsers, updateUserField };
+const CDN_GROUPCHATS_FILENAME = 'groupchats.json';
+
+const readGroupChats = async () => {
+  try {
+    const response = await axios.get(`${CDN_BASE_URL}/cdn/${CDN_USERS_FOLDER}/${CDN_GROUPCHATS_FILENAME}`, {
+      headers: {
+        'Authorization': CDN_AUTH_TOKEN
+      }
+    });
+    return response.data || [];
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.log("Group chat data file not found on CDN, returning empty array.");
+      return [];
+    }
+    console.error("Error reading group chat data from CDN:", error.message);
+    return [];
+  }
+};
+
+const writeGroupChats = async (groupChats) => {
+  try {
+    await axios.post(`${CDN_BASE_URL}/update-json`, {
+      folder: CDN_USERS_FOLDER,
+      filename: CDN_GROUPCHATS_FILENAME,
+      data: groupChats
+    }, {
+      headers: {
+        'Authorization': CDN_AUTH_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('Group chat data updated on CDN.');
+  } catch (error) {
+    console.error("Error writing group chat data to CDN:", error.message);
+    throw error;
+  }
+};
+
+module.exports = { readUsers, writeUsers, updateUserField, readGroupChats, writeGroupChats };
