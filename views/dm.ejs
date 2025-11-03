@@ -353,7 +353,6 @@ function displayMessage(msg) {
               }
             </div>
         `;
-console.log('Message content:', msg.content);
         messagesDiv.appendChild(messageContainer);
         
         if (msg.type === 'text') {
@@ -401,7 +400,6 @@ async function saveMessageToCDN(messageData) {
     }
 
     const data = await response.json();
-    console.log('CDN Save Message Response:', data);
   } catch (error) {
     console.error('Error saving message to CDN:', error);
     alert('Failed to save message history. Check console for details.');
@@ -409,7 +407,7 @@ async function saveMessageToCDN(messageData) {
 }
 
       socket.on('chat message', (msg) => {
-        console.log('Message received:', msg);
+        console.log('%cMessage received', 'color: blue;');
         displayMessage(msg);
       });
 
@@ -502,7 +500,7 @@ async function saveMessageToCDN(messageData) {
             content: imageUrl,
             timestamp: timestamp
           };
-          console.log('Emitting image message:', imageMessage);
+          console.log('%cMessage sent', 'color: blue;');
           socket.emit('chat message', imageMessage);
           await saveMessageToCDN(imageMessage);
 
@@ -524,7 +522,7 @@ async function saveMessageToCDN(messageData) {
             content: encryptedContent,
             timestamp: timestamp
           };
-          console.log('Emitting text message:', textMessage);
+          console.log('%cMessage sent', 'color: blue;');
           socket.emit('chat message', textMessage);
           await saveMessageToCDN(textMessage);
 
