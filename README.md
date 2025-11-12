@@ -1,5 +1,5 @@
 # Pulse
 
-A selfhosted encrypted chat application
+Pulse is now a Xylara product
 
-> development is in progress
+new repo can be found [here](https://github.com/Xylara/Pulse)
